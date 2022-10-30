@@ -39,7 +39,7 @@
             default = simpler-filehost;
             image =
               pkgs.dockerTools.buildImage {
-                name = "simpler-filehost-image";
+                name = "simpler-filehost";
                 config = {
                   Cmd = [ "${simpler-filehost}/bin/simpler-filehost" ];
                 };
