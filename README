@@ -1,1 +1,4 @@
 even simpler filehost for personal use
+
+to increase the upload size limit use something like
+ROCKET_LIMITS='{file="50MiB",data-form="50MiB"}'

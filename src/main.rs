@@ -24,19 +24,12 @@ async fn post_file(mut upload: Form<Upload<'_>>) -> status::Custom<String> {
         );
     }
 
-    if let Some(name) = upload.file.name() {
-        let extension = upload
-            .file
-            .content_type()
-            .unwrap()
-            .extension()
-            .unwrap_or("file".into());
+    if let Some(name) = upload.file.raw_name() {
 
         let new_name = format!(
-            "{}-{}.{}",
+            "{}-{}",
             Alphanumeric.sample_string(&mut thread_rng(), 4),
-            name,
-            extension
+            name.dangerous_unsafe_unsanitized_raw()
         );
 
         let uploaded = upload
@@ -71,7 +64,7 @@ fn index() -> String {
         "Use curl to upload:\n\
          curl -F file=@\"[file]\" {url}\n\
          If key is enabled then a field \"key\" might be required in which case it would be\n\
-         curl -F file=@\"[file]\" --F \"key=[key]\" {url}",
+         curl -F file=@\"[file]\" -F \"key=[key]\" {url}",
         url = env_user_url()
     )
 }
