@@ -25,7 +25,6 @@ async fn post_file(mut upload: Form<Upload<'_>>) -> status::Custom<String> {
     }
 
     if let Some(name) = upload.file.raw_name() {
-
         let new_name = format!(
             "{}-{}",
             Alphanumeric.sample_string(&mut thread_rng(), 4),
@@ -51,7 +50,7 @@ async fn post_file(mut upload: Form<Upload<'_>>) -> status::Custom<String> {
     }
 }
 
-#[get("/<filename>", format = "text/html")]
+#[get("/<filename>")]
 async fn get_file(filename: String) -> Option<NamedFile> {
     NamedFile::open(format!("{}/{}", env_root_dir(), filename))
         .await
@@ -87,14 +86,20 @@ fn env_key() -> String {
 fn env_user_url() -> String {
     let default_config = Config::default();
 
-    env::var("USER_URL").unwrap_or(format!("http://{}:{}",
-                                           default_config.address,
-                                           default_config.port))
+    env::var("USER_URL").unwrap_or(format!(
+        "http://{}:{}",
+        default_config.address, default_config.port
+    ))
 }
 
 #[launch]
 fn rocket() -> _ {
+    let cors = rocket_cors::CorsOptions::default().to_cors().unwrap();
+
     fs::create_dir_all(env_root_dir()).unwrap();
     println!("Starting");
-    rocket::build().mount("/", routes![post_file, get_file, index])
+
+    rocket::build()
+        .attach(cors)
+        .mount("/", routes![post_file, get_file, index])
 }
