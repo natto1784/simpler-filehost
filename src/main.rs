@@ -70,8 +70,8 @@ fn index() -> String {
     format!(
         "Use curl to upload:\n\
          curl -F file=@\"[file]\\n\" {url}\n\
-         If key is enabled then a header \"key\" might be required in which case it would be\n\
-         curl -F file=@\"[file]\" --header \"key: [key]\" {url}",
+         If key is enabled then a field \"key\" might be required in which case it would be\n\
+         curl -F file=@\"[file]\" --F \"key=[key]\" {url}",
         url = env_user_url()
     )
 }
