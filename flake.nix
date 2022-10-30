@@ -42,6 +42,7 @@
                 name = "simpler-filehost";
                 config = {
                   Cmd = [ "${simpler-filehost}/bin/simpler-filehost" ];
+                  Env = [ "ROCKET_ADDRESS=0.0.0.0" ];
                 };
               };
           };

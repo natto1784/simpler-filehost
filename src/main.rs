@@ -69,7 +69,7 @@ async fn get_file(filename: String) -> Option<NamedFile> {
 fn index() -> String {
     format!(
         "Use curl to upload:\n\
-         curl -F file=@\"[file]\\n\" {url}\n\
+         curl -F file=@\"[file]\" {url}\n\
          If key is enabled then a field \"key\" might be required in which case it would be\n\
          curl -F file=@\"[file]\" --F \"key=[key]\" {url}",
         url = env_user_url()
@@ -94,11 +94,14 @@ fn env_key() -> String {
 fn env_user_url() -> String {
     let default_config = Config::default();
 
-    env::var("USER_URL").unwrap_or(format!("http://localhost:{}", default_config.port))
+    env::var("USER_URL").unwrap_or(format!("http://{}:{}",
+                                           default_config.address,
+                                           default_config.port))
 }
 
 #[launch]
 fn rocket() -> _ {
     fs::create_dir_all(env_root_dir()).unwrap();
+    println!("Starting");
     rocket::build().mount("/", routes![post_file, get_file, index])
 }
