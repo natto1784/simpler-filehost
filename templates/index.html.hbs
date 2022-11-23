@@ -1,0 +1,33 @@
+<html>
+
+<head>
+  <title>
+    nattofiles
+  </title>
+</head>
+
+<body>
+  <p>
+    Use curl to upload:
+    <br>
+    <code>
+    curl -F file=@"[file]" {{user_url}}
+    </code>
+    <br>
+    If key is enabled then a field "key" might be required in which case it would be
+    <br>
+    <code>
+     curl -F file=@"[file]" -F "key=[key]" {{user_url}}
+    </code>
+  </p>
+  <form method="POST" enctype="multipart/form-data">
+      <label for="key">Key: </label>
+      <input type="text" id="key"> <br>
+      <input type="file" name="file" id="file">
+      <input type="hidden" name="redirect" id="true">
+      <input type="submit" value="Upload">
+  </form>
+
+</body>
+
+</html>

@@ -3,9 +3,18 @@
 #[macro_use]
 extern crate rocket;
 
-use rand::distributions::{Alphanumeric, DistString};
-use rand::thread_rng;
-use rocket::{form::Form, fs::NamedFile, fs::TempFile, http::Status, response::status, Config};
+use rand::{
+    distributions::{Alphanumeric, DistString},
+    thread_rng,
+};
+use rocket::{
+    form::Form,
+    fs::{NamedFile, TempFile},
+    http::Status,
+    response::Redirect,
+    Config,
+};
+use rocket_dyn_templates::{context, Template};
 use std::{env, fs};
 
 #[derive(FromForm)]
@@ -13,14 +22,22 @@ struct Upload<'r> {
     file: TempFile<'r>,
     #[field(default = "")]
     key: String,
+    #[field(default = false)]
+    redirect: bool,
+}
+
+#[derive(Responder)]
+enum RData {
+    Raw(String),
+    Redir(Redirect),
 }
 
 #[post("/", data = "<upload>")]
-async fn post_file(mut upload: Form<Upload<'_>>) -> status::Custom<String> {
+async fn post_file(mut upload: Form<Upload<'_>>) -> (Status, RData) {
     if env_use_key() && env_key() != upload.key {
-        return status::Custom(
+        return (
             Status::BadRequest,
-            "key not found in the header".to_string(),
+            RData::Raw(String::from("key not found in the header")),
         );
     }
 
@@ -38,15 +55,27 @@ async fn post_file(mut upload: Form<Upload<'_>>) -> status::Custom<String> {
 
         if let Err(error) = uploaded {
             println!("Error while copying from temp file: {:?}", error);
-            return status::Custom(
+            return (
                 Status::InternalServerError,
-                "Some stupid internal error occurred".to_string(),
+                RData::Raw(String::from("Some stupid internal error occurred")),
             );
         }
 
-        return status::Custom(Status::Ok, format!("{}/{}", env_user_url(), new_name));
+        let file_url = format!("{}/{}", env_user_url(), new_name);
+
+        if upload.redirect {
+            return (
+                Status::SeeOther,
+                RData::Redir(Redirect::to(file_url)),
+            );
+        }
+
+        return (Status::Ok, RData::Raw(file_url));
     } else {
-        return status::Custom(Status::BadRequest, "File name invalid".to_string());
+        return (
+            Status::BadRequest,
+            RData::Raw(String::from("File name invalid")),
+        );
     }
 }
 
@@ -58,23 +87,17 @@ async fn get_file(filename: String) -> Option<NamedFile> {
 }
 
 #[get("/")]
-fn index() -> String {
-    format!(
-        "Use curl to upload:\n\
-         curl -F file=@\"[file]\" {url}\n\
-         If key is enabled then a field \"key\" might be required in which case it would be\n\
-         curl -F file=@\"[file]\" -F \"key=[key]\" {url}",
-        url = env_user_url()
-    )
+fn index() -> Template {
+    Template::render("index", context! {user_url: env_user_url()})
 }
 
 fn env_root_dir() -> String {
-    env::var("ROOT_DIR").unwrap_or("/var/files".to_string())
+    env::var("ROOT_DIR").unwrap_or(String::from("/var/files"))
 }
 
 fn env_use_key() -> bool {
     env::var("USE_KEY")
-        .unwrap_or("false".to_string())
+        .unwrap_or(String::from("false"))
         .parse::<bool>()
         .unwrap_or(false)
 }
@@ -94,7 +117,7 @@ fn env_user_url() -> String {
 
 fn env_cors() -> bool {
     env::var("USE_CORS")
-        .unwrap_or("false".to_string())
+        .unwrap_or(String::from("false"))
         .parse::<bool>()
         .unwrap_or(false)
 }
@@ -109,9 +132,11 @@ fn rocket() -> _ {
     if env_cors() {
         rocket::build()
             .attach(cors)
+            .attach(Template::fairing())
             .mount("/", routes![post_file, get_file, index])
     } else {
         rocket::build()
+            .attach(Template::fairing())
             .mount("/", routes![post_file, get_file, index])
     }
 }
