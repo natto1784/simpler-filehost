@@ -92,6 +92,13 @@ fn env_user_url() -> String {
     ))
 }
 
+fn env_cors() -> bool {
+    env::var("USE_CORS")
+        .unwrap_or("false".to_string())
+        .parse::<bool>()
+        .unwrap_or(false)
+}
+
 #[launch]
 fn rocket() -> _ {
     let cors = rocket_cors::CorsOptions::default().to_cors().unwrap();
@@ -99,7 +106,12 @@ fn rocket() -> _ {
     fs::create_dir_all(env_root_dir()).unwrap();
     println!("Starting");
 
-    rocket::build()
-        .attach(cors)
-        .mount("/", routes![post_file, get_file, index])
+    if env_cors() {
+        rocket::build()
+            .attach(cors)
+            .mount("/", routes![post_file, get_file, index])
+    } else {
+        rocket::build()
+            .mount("/", routes![post_file, get_file, index])
+    }
 }
