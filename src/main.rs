@@ -33,7 +33,8 @@ enum RData {
 
 #[post("/", data = "<upload>")]
 async fn post_file(mut upload: Form<Upload<'_>>) -> (Status, RData) {
-    if env_use_key() && env_key() != upload.key {
+    let key = env_key();
+    if !key.is_empty() && key != upload.key {
         return (
             Status::BadRequest,
             RData::Raw(String::from("key not found in the header")),
@@ -96,7 +97,7 @@ fn index() -> RawHtml<String> {
 
 <head>
   <title>
-    nattofiles
+    {title}
   </title>
 </head>
 
@@ -126,7 +127,8 @@ fn index() -> RawHtml<String> {
 
 </html>
 "#,
-        user_url = env_user_url()
+        user_url = env_user_url(),
+        title = env_title()
     ))
 }
 
@@ -134,15 +136,8 @@ fn env_root_dir() -> String {
     env::var("ROOT_DIR").unwrap_or(String::from("/var/files"))
 }
 
-fn env_use_key() -> bool {
-    env::var("USE_KEY")
-        .unwrap_or(String::from("false"))
-        .parse::<bool>()
-        .unwrap_or(false)
-}
-
 fn env_key() -> String {
-    env::var("KEY").expect("KEY not set in the environment")
+    env::var("KEY").unwrap_or(String::new())
 }
 
 fn env_user_url() -> String {
@@ -152,6 +147,10 @@ fn env_user_url() -> String {
         "http://{}:{}",
         default_config.address, default_config.port
     ))
+}
+
+fn env_title() -> String {
+    env::var("TITLE").unwrap_or(String::from("Simpler Filehost"))
 }
 
 fn env_cors() -> bool {
