@@ -11,10 +11,9 @@ use rocket::{
     form::Form,
     fs::{NamedFile, TempFile},
     http::Status,
-    response::Redirect,
+    response::content::RawHtml,
     Config,
 };
-use rocket_dyn_templates::{context, Template};
 use std::{env, fs};
 
 #[derive(FromForm)]
@@ -23,13 +22,13 @@ struct Upload<'r> {
     #[field(default = "")]
     key: String,
     #[field(default = false)]
-    redirect: bool,
+    custom: bool,
 }
 
 #[derive(Responder)]
 enum RData {
     Raw(String),
-    Redir(Redirect),
+    Html(RawHtml<String>),
 }
 
 #[post("/", data = "<upload>")]
@@ -63,10 +62,13 @@ async fn post_file(mut upload: Form<Upload<'_>>) -> (Status, RData) {
 
         let file_url = format!("{}/{}", env_user_url(), new_name);
 
-        if upload.redirect {
+        if upload.custom {
             return (
                 Status::SeeOther,
-                RData::Redir(Redirect::to(file_url)),
+                RData::Html(RawHtml(format!(
+                    "Here is your file: <a href={url}>{url}</a>",
+                    url = file_url
+                ))),
             );
         }
 
@@ -87,8 +89,45 @@ async fn get_file(filename: String) -> Option<NamedFile> {
 }
 
 #[get("/")]
-fn index() -> Template {
-    Template::render("index", context! {user_url: env_user_url()})
+fn index() -> RawHtml<String> {
+    RawHtml(format!(
+        r#"
+<html>
+
+<head>
+  <title>
+    nattofiles
+  </title>
+</head>
+
+<body>
+  <p>
+    Use curl to upload:
+    <br>
+    <code>
+    curl -F file=@"[file]" {user_url}
+    </code>
+    <br>
+    If key is enabled then a field "key" might be required in which case it would be
+    <br>
+    <code>
+     curl -F file=@"[file]" -F "key=[key]" {user_url}
+    </code>
+  </p>
+  <form method="POST" enctype="multipart/form-data">
+      <label for="key">Key: </label>
+      <input type="text" id="key"> <br>
+      <input type="file" name="file" id="file">
+      <input type="hidden" name="custom" id="true">
+      <input type="submit" value="Upload">
+  </form>
+
+</body>
+
+</html>
+"#,
+        user_url = env_user_url()
+    ))
 }
 
 fn env_root_dir() -> String {
@@ -132,11 +171,8 @@ fn rocket() -> _ {
     if env_cors() {
         rocket::build()
             .attach(cors)
-            .attach(Template::fairing())
             .mount("/", routes![post_file, get_file, index])
     } else {
-        rocket::build()
-            .attach(Template::fairing())
-            .mount("/", routes![post_file, get_file, index])
+        rocket::build().mount("/", routes![post_file, get_file, index])
     }
 }
