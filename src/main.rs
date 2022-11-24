@@ -67,7 +67,7 @@ async fn post_file(mut upload: Form<Upload<'_>>) -> (Status, RData) {
             return (
                 Status::SeeOther,
                 RData::Html(RawHtml(format!(
-                    "Here is your file: <a href={url}>{url}</a>",
+                    r#"Here is your file: <a href="{url}">{url}</a>"#,
                     url = file_url
                 ))),
             );
@@ -127,8 +127,8 @@ fn index() -> RawHtml<String> {
 
 </html>
 "#,
-        user_url = env_user_url(),
-        title = env_title()
+        title = env_title(),
+        user_url = env_user_url()
     ))
 }
 
